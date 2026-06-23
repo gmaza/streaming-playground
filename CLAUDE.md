@@ -76,7 +76,7 @@ in each service (see "Key decisions").
 | Publisher reliability | Reliable `Producer` with a confirmation handler | Confirms prove the broker persisted the message; we log unconfirmed sends. |
 | Credentials | `app` / `app-pass` via env in compose; same in app config | Avoid the `guest` user (loopback-only, not for apps). Real prod would use secrets, not committed values. |
 | Stream host advertise | `stream.advertised_host = localhost` | The broker hands clients the node hostname to connect to; without this a host-side client gets the unreachable container hostname. Classic streams gotcha. |
-| Container engine | Works with **Docker or Podman** (`run.sh` auto-detects; override with `CONTAINER_ENGINE`) | Some environments restrict Docker. The compose file is shared; config mounts use `:ro,z` (SELinux relabel — required by rootless Podman, ignored by Docker). Readiness is checked via `rabbitmq-diagnostics` inside the container, not the engine's health JSON, because Docker (`.State.Health`) and Podman (`.State.Healthcheck`) expose it differently. |
+| Container engine | **macOS/Linux → Docker via `run.sh`; Windows → Podman via `run.ps1`** | Same compose file for both; only the runner script differs (bash vs PowerShell, `docker` vs `podman`). Some environments restrict Docker, hence the Podman path on Windows. Config mounts use `:ro,z` (SELinux relabel — needed by rootless Podman, ignored by Docker). Both scripts check readiness via `rabbitmq-diagnostics` inside the container, not the engine's health JSON (Docker exposes `.State.Health`, Podman `.State.Healthcheck`). |
 
 ## Ports
 
@@ -88,12 +88,15 @@ in each service (see "Key decisions").
 
 ## How to run
 
-> Quickest path: `./run.sh` (auto-detects Docker or Podman, starts everything and
-> sends a sample update). Force an engine with `CONTAINER_ENGINE=podman ./run.sh`.
-> Manual steps below — swap `docker compose` for `podman compose` under Podman.
+> Quickest path:
+> - **macOS / Linux (Docker):** `./run.sh`
+> - **Windows (Podman):** `./run.ps1` (PowerShell)
+>
+> Both start the broker + apps and send a sample update. Manual steps below —
+> swap `docker compose` for `podman compose` on Windows.
 
 ```bash
-# 1. Start the broker  (Podman: `podman compose up -d`)
+# 1. Start the broker  (Windows/Podman: `podman compose up -d`)
 cd docker && docker compose up -d && cd ..
 
 # 2. Start the consumer (it declares the stream idempotently and waits)
