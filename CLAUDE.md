@@ -76,6 +76,7 @@ in each service (see "Key decisions").
 | Publisher reliability | Reliable `Producer` with a confirmation handler | Confirms prove the broker persisted the message; we log unconfirmed sends. |
 | Credentials | `app` / `app-pass` via env in compose; same in app config | Avoid the `guest` user (loopback-only, not for apps). Real prod would use secrets, not committed values. |
 | Stream host advertise | `stream.advertised_host = localhost` | The broker hands clients the node hostname to connect to; without this a host-side client gets the unreachable container hostname. Classic streams gotcha. |
+| Container engine | Works with **Docker or Podman** (`run.sh` auto-detects; override with `CONTAINER_ENGINE`) | Some environments restrict Docker. The compose file is shared; config mounts use `:ro,z` (SELinux relabel — required by rootless Podman, ignored by Docker). Readiness is checked via `rabbitmq-diagnostics` inside the container, not the engine's health JSON, because Docker (`.State.Health`) and Podman (`.State.Healthcheck`) expose it differently. |
 
 ## Ports
 
@@ -87,8 +88,12 @@ in each service (see "Key decisions").
 
 ## How to run
 
+> Quickest path: `./run.sh` (auto-detects Docker or Podman, starts everything and
+> sends a sample update). Force an engine with `CONTAINER_ENGINE=podman ./run.sh`.
+> Manual steps below — swap `docker compose` for `podman compose` under Podman.
+
 ```bash
-# 1. Start the broker
+# 1. Start the broker  (Podman: `podman compose up -d`)
 cd docker && docker compose up -d && cd ..
 
 # 2. Start the consumer (it declares the stream idempotently and waits)

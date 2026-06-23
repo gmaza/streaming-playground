@@ -20,8 +20,11 @@ services:
       - "15672:15672"  # management UI / HTTP API — http://localhost:15672
     volumes:
       # Plugins + tuning are mounted read-only so the image stays declarative.
-      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
-      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # The `,z` is an SELinux shared-relabel flag: required for rootless Podman on
+      # SELinux-enforcing hosts (otherwise the container can't read these files);
+      # silently ignored by Docker and on non-SELinux systems.
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro,z
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro,z
       # Named volume: stream data is an on-disk append-only log; persist it.
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
