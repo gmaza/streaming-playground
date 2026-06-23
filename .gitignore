@@ -1,0 +1,21 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+# .NET / Rider / VS
+*.user
+*.suo
+.vs/
+.idea/
+
+# Local app logs from run.sh
+*.log
+
+# OS
+.DS_Store
+
+# Local Claude state
+.claude/

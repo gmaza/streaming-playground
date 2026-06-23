@@ -1,0 +1,38 @@
+# RabbitMQ with the Streams plugin for local development.
+# Streams speak a dedicated binary protocol on :5552 (NOT AMQP on :5672).
+services:
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    container_name: rabbitmq-streams
+    # A STABLE hostname matters for streams: the broker derives its node name from
+    # the hostname and advertises connection metadata to clients. Pinning it keeps
+    # the data volume valid across restarts (node name must not change).
+    hostname: rabbitmq-streams
+    restart: unless-stopped
+    environment:
+      # Create a real application user. We deliberately avoid the built-in `guest`
+      # user because it is restricted to loopback and is not meant for apps.
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: app-pass
+    ports:
+      - "5552:5552"    # stream protocol — the apps connect here
+      - "5672:5672"    # AMQP 0.9.1 — not used by the apps, exposed for convenience
+      - "15672:15672"  # management UI / HTTP API — http://localhost:15672
+    volumes:
+      # Plugins + tuning are mounted read-only so the image stays declarative.
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # Named volume: stream data is an on-disk append-only log; persist it.
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      # Consider the broker healthy only when it is running AND its listener ports
+      # (including the stream port) accept connections — otherwise apps race startup.
+      # CMD-SHELL (not CMD) so the && is evaluated by a shell.
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  rabbitmq-data:
